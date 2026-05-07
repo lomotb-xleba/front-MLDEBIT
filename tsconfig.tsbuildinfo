@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/config/navigation.tsx","./src/config/roles.ts","./src/layout/AppShell.tsx","./src/layout/Sidebar.tsx","./src/pages/Pages.tsx","./src/shared/format.ts","./src/shared/services.ts","./src/shared/ui/KpiCard.tsx"],"version":"5.9.3"}
