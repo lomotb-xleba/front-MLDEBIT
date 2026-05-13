@@ -1,22 +1,43 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { menuItems, type PageId } from "./config/navigation";
 import { accessLevelLabel, pageToDomain, roleRules, type AccessLevel, type UserRole } from "./config/roles";
 import { AppShell } from "./layout/AppShell";
 import {
-  AbTestsPage,
   ChannelsPage,
   DashboardPage,
   MlMonitoringPage,
   OperationsPage,
   ReceivablesPage,
   RecommendationsPage,
-  ReportsPage,
-  SettingsPage
+  ReportsPage
 } from "./pages/Pages";
+import { deleteCookie, getCookie, setCookie } from "./shared/cookies";
+
+const roleOptions = Object.keys(roleRules) as UserRole[];
+
+const isRole = (value: string | null): value is UserRole => {
+  return value !== null && roleOptions.includes(value as UserRole);
+};
+
+const getStoredRole = (): UserRole | null => {
+  const saved = getCookie("ml-debit-user");
+  return isRole(saved) ? saved : null;
+};
+
+const getStoredPage = (): PageId => {
+  const stored = getCookie("ml-debit-page");
+  if (!stored) {
+    return "dashboard";
+  }
+  return menuItems.some((item) => item.id === stored) ? (stored as PageId) : "dashboard";
+};
 
 export const App = () => {
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const [activePage, setActivePage] = useState<PageId>("dashboard");
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(getStoredRole());
+  const [loginRole, setLoginRole] = useState<UserRole>(getStoredRole() ?? "analyst");
+  const [username, setUsername] = useState(() => getCookie("ml-debit-username") ?? "");
+  const [password, setPassword] = useState("");
+  const [activePage, setActivePage] = useState<PageId>(getStoredPage);
 
   const roleMenu = useMemo(() => {
     if (!selectedRole) {
@@ -47,29 +68,83 @@ export const App = () => {
     return level === "none" ? "" : accessLevelLabel[level as Exclude<AccessLevel, "none">];
   }, [effectivePage, selectedRole]);
 
+  const handleLogin = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      return;
+    }
+    setSelectedRole(loginRole);
+    setCookie("ml-debit-user", loginRole, 7);
+    setCookie("ml-debit-username", username.trim(), 7);
+    setCookie("ml-debit-page", "dashboard", 7);
+    setActivePage("dashboard");
+  };
+
+  const handlePageChange = (page: PageId) => {
+    setActivePage(page);
+    setCookie("ml-debit-page", page, 7);
+  };
+
+  const handleLogout = () => {
+    deleteCookie("ml-debit-user");
+    deleteCookie("ml-debit-username");
+    deleteCookie("ml-debit-page");
+    setSelectedRole(null);
+    setPassword("");
+    setActivePage("dashboard");
+  };
+
   if (!selectedRole) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-slate-100">
-        <section className="w-full max-w-4xl rounded-2xl border border-slate-800 bg-slate-900 p-6">
-          <h1 className="text-2xl font-semibold">Выбор роли</h1>
-          <p className="mt-2 text-sm text-slate-400">Выберите роль для входа в систему.</p>
-          <div className="mt-5 grid grid-cols-1 gap-3">
-            {(Object.keys(roleRules) as UserRole[]).map((role) => (
-              <button
-                key={role}
-                type="button"
-                onClick={() => setSelectedRole(role)}
-                className="rounded-xl border border-slate-700 bg-slate-800/60 p-4 text-left transition hover:border-blue-500"
-              >
-                <h2 className="text-base font-semibold">{roleRules[role].label}</h2>
-                <ul className="mt-2 space-y-1 text-xs text-slate-300">
-                  <li>Дашборды: {roleRules[role].dashboards === "full" ? "Да" : roleRules[role].dashboards === "none" ? "Нет" : "Ограниченно"}</li>
-                  <li>Работа с должниками: {roleRules[role].debtWork === "full" ? "Да" : roleRules[role].debtWork === "none" ? "Нет" : "Ограниченно"}</li>
-                  <li>ML-мониторинг: {roleRules[role].mlMonitoring === "full" ? "Да" : roleRules[role].mlMonitoring === "none" ? "Нет" : "Ограниченно / частично"}</li>
-                </ul>
-              </button>
-            ))}
+        <section className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/95 p-8 shadow-xl shadow-slate-950/30">
+          <div className="mb-6 text-center">
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">SmartCollection AI</p>
+            <h1 className="mt-3 text-3xl font-semibold">Вход в систему</h1>
+            <p className="mt-2 text-sm text-slate-400">Введите данные для доступа к лицевым счетам.</p>
           </div>
+          <form className="space-y-4" onSubmit={handleLogin}>
+            <label className="block text-sm text-slate-300">
+              <span className="mb-2 block text-slate-500">Логин</span>
+              <input
+                type="text"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-blue-500"
+                placeholder="ivanov"
+              />
+            </label>
+            <label className="block text-sm text-slate-300">
+              <span className="mb-2 block text-slate-500">Пароль</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-blue-500"
+                placeholder="••••••••"
+              />
+            </label>
+            <label className="block text-sm text-slate-300">
+              <span className="mb-2 block text-slate-500">Роль</span>
+              <select
+                value={loginRole}
+                onChange={(event) => setLoginRole(event.target.value as UserRole)}
+                className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-blue-500"
+              >
+                {roleOptions.map((role) => (
+                  <option key={role} value={role} className="bg-slate-950 text-slate-100">
+                    {roleRules[role].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="submit"
+              className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-500"
+            >
+              Войти
+            </button>
+          </form>
         </section>
       </div>
     );
@@ -81,10 +156,8 @@ export const App = () => {
     recommendations: <RecommendationsPage />,
     operations: <OperationsPage />,
     channels: <ChannelsPage />,
-    "ab-tests": <AbTestsPage />,
     "ml-monitoring": <MlMonitoringPage />,
-    reports: <ReportsPage />,
-    settings: <SettingsPage />
+    reports: <ReportsPage />
   };
 
   if (!effectivePage) {
@@ -94,10 +167,10 @@ export const App = () => {
   return (
     <AppShell
       activePage={effectivePage}
-      onChangePage={setActivePage}
-      onChangeRole={() => setSelectedRole(null)}
+      onChangePage={handlePageChange}
+      onChangeRole={handleLogout}
       menuItems={roleMenu}
-      roleTitle={roleRules[selectedRole].label}
+      roleTitle={`${roleRules[selectedRole].label} • ${username || "пользователь"}`}
       roleAccessHint={roleAccessHint}
     >
       {pageContent[effectivePage]}

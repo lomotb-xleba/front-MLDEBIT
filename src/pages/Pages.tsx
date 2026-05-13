@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PhoneCall } from "lucide-react";
 import {
   Bar,
@@ -19,230 +19,188 @@ import {
 } from "recharts";
 import { formatCurrency } from "../shared/format";
 import {
+  channelService,
+  dashboardService,
   operationService,
   recommendationService,
+  receivablesService,
   reportService,
-  settingsService,
+  modelService,
   type OperatorResult,
-  type ReportFormat,
-  type SystemSettings
+  type ReportFormat
 } from "../shared/services";
 import { KpiCard } from "../shared/ui/KpiCard";
-
-const abChartData = [
-  { группа: "Контрольная", recoveryRate: 48, cashToCash: 41 },
-  { группа: "Тестовая", recoveryRate: 62, cashToCash: 34 }
-];
-
-const overdueData = [
-  { name: "0–30 дней", value: 26 },
-  { name: "31–60 дней", value: 38 },
-  { name: "61+ дней", value: 36 }
-];
-
-const segmentData = [
-  { name: "Крупный бизнес", value: 44 },
-  { name: "Средний бизнес", value: 33 },
-  { name: "Малый бизнес", value: 23 }
-];
+import type {
+  ChannelMetric,
+  DashboardMetrics,
+  ModelQuality,
+  OperationTask,
+  RecommendationItem,
+  ReceivablesSummary
+} from "../shared/mockData";
 
 const pieColors = ["#3b82f6", "#6366f1", "#a855f7"];
 
-const trendData = [
-  { период: "Янв", вРиске: 112, взыскано: 42 },
-  { период: "Фев", вРиске: 118, взыскано: 46 },
-  { период: "Мар", вРиске: 121, взыскано: 51 },
-  { период: "Апр", вРиске: 110, взыскано: 54 },
-  { период: "Май", вРиске: 104, взыскано: 57 }
-];
+export const DashboardPage = () => {
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
 
-const channelData = [
-  { канал: "SMS", roi: 124, взыскание: 6.4 },
-  { канал: "Email", roi: 98, взыскание: 4.9 },
-  { канал: "Звонок", roi: 156, взыскание: 8.2 },
-  { канал: "Автодозвон", roi: 131, взыскание: 7.1 }
-];
+  useEffect(() => {
+    dashboardService.getMetrics().then(setMetrics);
+  }, []);
 
-const confusionData = [
-  { x: 1, y: 92, name: "Модель рекомендовала, оператор подтвердил" },
-  { x: 2, y: 38, name: "Модель рекомендовала, результат отрицательный" },
-  { x: 3, y: 49, name: "Оператор выбрал лучше" },
-  { x: 4, y: 27, name: "Оператор выбрал хуже" }
-];
+  if (!metrics) {
+    return <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 text-slate-400">Загрузка данных...</div>;
+  }
 
-export const DashboardPage = () => (
-  <div className="space-y-6">
-    <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <KpiCard title="Recovery Rate" value="72%" />
-      <KpiCard title="Цикл Cash-to-Cash" value="34 дня" />
-      <KpiCard title="Финансовый эффект" value={formatCurrency(12340000)} />
-      <KpiCard title="Экономия бюджета" value={formatCurrency(2100000)} />
-      <KpiCard title="Задолженность в риске" value={formatCurrency(96400000)} />
-      <KpiCard title="Статус модели" value="Стабильна" />
-    </section>
+  return (
+    <div className="space-y-6">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <KpiCard title="Recovery Rate" value={`${metrics.recoveryRate}%`} />
+        <KpiCard title="Цикл Cash-to-Cash" value={metrics.cashToCash} />
+        <KpiCard title="Ожидаемый эффект" value={formatCurrency(metrics.expectedEffect)} />
+        <KpiCard title="Счётов в работе" value={`${metrics.accountsInWork}`} />
+        <KpiCard title="Счётов в риске" value={`${metrics.atRiskAccounts}`} />
+        <KpiCard title="Статус модели" value={metrics.modelStatus} />
+      </section>
 
-    <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-      <h3 className="text-lg font-semibold">Результаты A/B тестов</h3>
-      <p className="mt-1 text-sm text-slate-400">
-        Сравнение контрольной группы без ML-рекомендаций и тестовой группы с ML-рекомендациями.
-      </p>
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="rounded-lg bg-slate-800/70 p-4">
-          <p className="text-sm text-slate-400">Recovery Rate</p>
-          <p className="mt-2 text-xl font-semibold">Контроль: 48% • Тест: 62%</p>
-        </div>
-        <div className="rounded-lg bg-slate-800/70 p-4">
-          <p className="text-sm text-slate-400">Финансовый uplift</p>
-          <p className="mt-2 text-xl font-semibold">{formatCurrency(4350000)}</p>
-        </div>
-        <div className="rounded-lg bg-slate-800/70 p-4">
-          <p className="text-sm text-slate-400">Стоимость взыскания</p>
-          <p className="mt-2 text-xl font-semibold">
-            Контроль: {formatCurrency(1520000)} • Тест: {formatCurrency(1210000)}
-          </p>
-        </div>
-        <div className="rounded-lg bg-slate-800/70 p-4">
-          <p className="text-sm text-slate-400">Цикл Cash-to-Cash</p>
-          <p className="mt-2 text-xl font-semibold">Контроль: 41 день • Тест: 34 дня</p>
-        </div>
-      </div>
+      <section className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+        <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold">Динамика возврата</h3>
+              <p className="mt-1 text-sm text-slate-400">Изменение Recovery Rate и собранной суммы по лицевым счётам.</p>
+            </div>
+          </div>
+          <div className="mt-5 h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={metrics.trend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="period" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" />
+                <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} />
+                <Legend />
+                <Line type="monotone" dataKey="recoveryRate" name="Recovery Rate, %" stroke="#22c55e" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="collected" name="Сумма взыскания" stroke="#3b82f6" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </article>
 
-      <div className="mt-5 h-72 rounded-xl border border-slate-800 bg-slate-950/70 p-3">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={abChartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-            <XAxis dataKey="группа" stroke="#94a3b8" />
-            <YAxis yAxisId="left" stroke="#94a3b8" />
-            <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" />
-            <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} />
-            <Legend />
-            <Bar yAxisId="left" dataKey="recoveryRate" name="Recovery Rate, %" fill="#22c55e" radius={[8, 8, 0, 0]} />
-            <Bar yAxisId="right" dataKey="cashToCash" name="Цикл Cash-to-Cash, дней" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </section>
+        <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <h3 className="text-lg font-semibold">Фокус каналов</h3>
+          <p className="mt-1 text-sm text-slate-400">Оценка эффективности каналов взыскания для лицевых счётов.</p>
+          <div className="mt-5 h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={metrics.channels}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="channel" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" />
+                <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} />
+                <Legend />
+                <Bar dataKey="roi" name="ROI, %" fill="#22c55e" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </article>
+      </section>
+    </div>
+  );
+};
 
-    <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-      <h3 className="text-lg font-semibold">Динамика «было / стало»</h3>
-      <div className="mt-4 h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={trendData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-            <XAxis dataKey="период" stroke="#94a3b8" />
-            <YAxis stroke="#94a3b8" />
-            <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} />
-            <Legend />
-            <Line type="monotone" dataKey="вРиске" name="Задолженность в риске, млн ₽" stroke="#f97316" strokeWidth={2} />
-            <Line type="monotone" dataKey="взыскано" name="Сумма взыскания, млн ₽" stroke="#22c55e" strokeWidth={2} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </section>
-  </div>
-);
+export const ReceivablesPage = () => {
+  const [summary, setSummary] = useState<ReceivablesSummary | null>(null);
 
-export const ReceivablesPage = () => (
-  <div className="space-y-6">
-    <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
-      <KpiCard title="Общий объём задолженности" value={formatCurrency(128400000)} />
-      <KpiCard title="Просроченная задолженность" value={formatCurrency(96400000)} />
-      <KpiCard title="Доля просроченной задолженности" value="75%" />
-      <KpiCard title="Средний срок просрочки" value="43 дня" />
-    </section>
+  useEffect(() => {
+    receivablesService.getSummary().then(setSummary);
+  }, []);
 
-    <section className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-4">
-      <label className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-        <span className="mb-2 block text-sm text-slate-400">Регион</span>
-        <select className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
-          <option>Все регионы</option>
-          <option>Центр</option>
-          <option>Северо-Запад</option>
-          <option>Поволжье</option>
-        </select>
-      </label>
-      <label className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-        <span className="mb-2 block text-sm text-slate-400">Сегмент</span>
-        <select className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
-          <option>Все сегменты</option>
-          <option>Крупный бизнес</option>
-          <option>Средний бизнес</option>
-          <option>Малый бизнес</option>
-        </select>
-      </label>
-      <label className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-        <span className="mb-2 block text-sm text-slate-400">Срок просрочки</span>
-        <select className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
-          <option>Любой срок</option>
-          <option>0–30 дней</option>
-          <option>31–60 дней</option>
-          <option>61+ дней</option>
-        </select>
-      </label>
-      <label className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-        <span className="mb-2 block text-sm text-slate-400">Канал коммуникации</span>
-        <select className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
-          <option>Все каналы</option>
-          <option>SMS</option>
-          <option>Email</option>
-          <option>Звонок оператора</option>
-        </select>
-      </label>
-    </section>
+  if (!summary) {
+    return <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 text-slate-400">Загрузка данных...</div>;
+  }
 
-    <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-        <h3 className="text-base font-semibold">Распределение по срокам просрочки</h3>
-        <div className="mt-4 h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={overdueData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="name" stroke="#94a3b8" />
-              <YAxis stroke="#94a3b8" />
-              <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} />
-              <Legend />
-              <Bar dataKey="value" name="Доля задолженности, %" fill="#60a5fa" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </article>
+  return (
+    <div className="space-y-6">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <KpiCard title="Общий объём задолженности" value={formatCurrency(summary.totalDebt)} />
+        <KpiCard title="Просроченная задолженность" value={formatCurrency(summary.overdueDebt)} />
+        <KpiCard title="Доля просроченной" value={`${summary.overdueShare}%`} />
+        <KpiCard title="Средний срок просрочки" value={`${summary.avgOverdueDays} дня`} />
+      </section>
 
-      <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-        <h3 className="text-base font-semibold">Распределение по сегментам</h3>
-        <div className="mt-4 h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={segmentData} dataKey="value" nameKey="name" outerRadius={100} label>
-                {segmentData.map((entry, index) => (
-                  <Cell key={entry.name} fill={pieColors[index]} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-        <p className="mt-3 text-sm text-slate-400">Легенда: доля задолженности в каждом клиентском сегменте.</p>
-      </article>
-    </section>
-  </div>
-);
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
+        <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold">Распределение по срокам</h3>
+              <p className="mt-1 text-sm text-slate-400">Процент задолженности по периоду просрочки.</p>
+            </div>
+          </div>
+          <div className="mt-5 h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={summary.overdueDistribution}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="name" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" />
+                <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} />
+                <Bar dataKey="value" name="Доля, %" fill="#60a5fa" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </article>
+
+        <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <h3 className="text-lg font-semibold">Сегменты счетов</h3>
+          <div className="mt-5 h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={summary.segmentDistribution} dataKey="value" nameKey="name" outerRadius={100} label>
+                  {summary.segmentDistribution.map((entry, index) => (
+                    <Cell key={entry.name} fill={pieColors[index]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="mt-4 text-sm text-slate-400">Топ регионов по сумме задолженности.</p>
+          <ul className="mt-3 space-y-2 text-sm text-slate-300">
+            {summary.topRegions.map((item) => (
+              <li key={item.region} className="flex items-center justify-between rounded-xl bg-slate-950/60 px-3 py-2">
+                <span>{item.region}</span>
+                <span>{formatCurrency(item.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </section>
+    </div>
+  );
+};
 
 export const RecommendationsPage = () => {
-  const [selectedId, setSelectedId] = useState("C-1042");
+  const [items, setItems] = useState<RecommendationItem[]>([]);
+  const [selectedId, setSelectedId] = useState<string>("");
   const [status, setStatus] = useState<"в работе" | "выполнено">("в работе");
   const [loading, setLoading] = useState(false);
 
-  const items = [
-    { id: "C-1042", name: "ООО «Альянс Логистик»", rec: "звонок оператора", priority: "высокий", success: "78%" },
-    { id: "C-1188", name: "АО «Сфера Трейд»", rec: "SMS", priority: "средний", success: "61%" },
-    { id: "C-1326", name: "ИП Власов", rec: "передача в юридический блок", priority: "высокий", success: "53%" }
-  ];
+  useEffect(() => {
+    recommendationService.list().then((data) => {
+      setItems(data);
+      setSelectedId(data[0]?.id ?? "");
+      setStatus(data[0]?.status ?? "в работе");
+    });
+  }, []);
+
   const selected = items.find((item) => item.id === selectedId) ?? items[0];
 
   const handleComplete = async () => {
+    if (!selected) {
+      return;
+    }
+
     setLoading(true);
     const result = await recommendationService.setStatus(selected.id, "выполнено");
+    setItems((prev) => prev.map((item) => (item.id === selected.id ? { ...item, status: result.status } : item)));
     setStatus(result.status);
     setLoading(false);
   };
@@ -250,7 +208,7 @@ export const RecommendationsPage = () => {
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr]">
       <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-        <h3 className="text-lg font-semibold">Список должников с рекомендациями</h3>
+        <h3 className="text-lg font-semibold">Список лицевых счетов с рекомендациями</h3>
         <ul className="mt-4 space-y-3 text-sm">
           {items.map((item) => (
             <li key={item.id}>
@@ -258,12 +216,12 @@ export const RecommendationsPage = () => {
                 type="button"
                 onClick={() => {
                   setSelectedId(item.id);
-                  setStatus("в работе");
+                  setStatus(item.status);
                 }}
                 className={`w-full rounded-lg p-3 text-left ${selectedId === item.id ? "bg-blue-600/20 ring-1 ring-blue-500" : "bg-slate-800/70"}`}
               >
-                <p className="font-medium">ID {item.id} • {item.name}</p>
-                <p className="text-slate-400">Рекомендация: {item.rec} • Приоритет: {item.priority} • Вероятность успеха: {item.success}</p>
+                <p className="font-medium">ID {item.id} • {item.account}</p>
+                <p className="text-slate-400">Рекомендация: {item.recommendation} • Приоритет: {item.priority} • Успех: {item.successRate}</p>
               </button>
             </li>
           ))}
@@ -271,41 +229,52 @@ export const RecommendationsPage = () => {
       </section>
       <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
         <h3 className="text-lg font-semibold">Карточка рекомендации</h3>
-        <div className="mt-4 space-y-2 text-sm">
-          <p><span className="text-slate-400">Клиент:</span> {selected.name}</p>
-          <p><span className="text-slate-400">Договор:</span> D-90331</p>
-          <p><span className="text-slate-400">Сумма задолженности:</span> {formatCurrency(840000)}</p>
-          <p><span className="text-slate-400">Риск невозврата:</span> 0.62</p>
-          <p><span className="text-slate-400">Рекомендованный канал:</span> {selected.rec}</p>
-          <p><span className="text-slate-400">Ожидаемый финансовый эффект:</span> {formatCurrency(124000)}</p>
-          <p><span className="text-slate-400">Статус выполнения:</span> {status}</p>
-        </div>
-        <button
-          type="button"
-          onClick={handleComplete}
-          disabled={loading || status === "выполнено"}
-          className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-        >
-          {loading ? "Сохранение..." : status === "выполнено" ? "Выполнено" : "Отметить выполненной"}
-        </button>
+        {selected ? (
+          <>
+            <div className="mt-4 space-y-2 text-sm">
+              <p><span className="text-slate-400">Счёт:</span> {selected.account}</p>
+              <p><span className="text-slate-400">Сумма задолженности:</span> {formatCurrency(selected.debt)}</p>
+              <p><span className="text-slate-400">Риск невозврата:</span> {selected.riskScore}</p>
+              <p><span className="text-slate-400">Канал:</span> {selected.recommendation}</p>
+              <p><span className="text-slate-400">Регион:</span> {selected.region}</p>
+              <p><span className="text-slate-400">Статус:</span> {status}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleComplete}
+              disabled={loading || status === "выполнено"}
+              className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            >
+              {loading ? "Сохранение..." : status === "выполнено" ? "Выполнено" : "Отметить выполненной"}
+            </button>
+          </>
+        ) : (
+          <p className="text-sm text-slate-400">Выберите счёт слева.</p>
+        )}
       </section>
     </div>
   );
 };
 
 export const OperationsPage = () => {
-  const [selectedDebtor, setSelectedDebtor] = useState("C-1042");
+  const [tasks, setTasks] = useState<OperationTask[]>([]);
+  const [selectedDebtor, setSelectedDebtor] = useState<string>("");
   const [lastAction, setLastAction] = useState<string>("Нет действий");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const tasks = [
-    { id: "C-1042", name: "ООО «Альянс Логистик»", priority: "высокий", overdue: "42 дня", amount: 840000 },
-    { id: "C-1188", name: "АО «Сфера Трейд»", priority: "средний", overdue: "19 дней", amount: 460000 },
-    { id: "C-1326", name: "ИП Власов", priority: "высокий", overdue: "67 дней", amount: 320000 }
-  ];
-  const current = tasks.find((task) => task.id === selectedDebtor) ?? tasks[0];
+  useEffect(() => {
+    operationService.listTasks().then((data) => {
+      setTasks(data);
+      setSelectedDebtor(data[0]?.id ?? "");
+    });
+  }, []);
+
+  const current = tasks.find((task) => task.id === selectedDebtor);
 
   const submitAction = async (result: OperatorResult) => {
+    if (!selectedDebtor) {
+      return;
+    }
     setIsSubmitting(true);
     await operationService.submitAction({ debtorId: selectedDebtor, result });
     setLastAction(result);
@@ -315,7 +284,7 @@ export const OperationsPage = () => {
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr]">
       <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-        <h3 className="text-lg font-semibold">Список задач</h3>
+        <h3 className="text-lg font-semibold">Операционные задачи по лицевым счетам</h3>
         <ul className="mt-4 space-y-3 text-sm">
           {tasks.map((task) => (
             <li key={task.id}>
@@ -327,7 +296,7 @@ export const OperationsPage = () => {
                 }}
                 className={`w-full rounded-lg p-3 text-left ${selectedDebtor === task.id ? "bg-blue-600/20 ring-1 ring-blue-500" : "bg-slate-800/70"}`}
               >
-                <p className="font-medium">{task.name} — приоритет {task.priority}</p>
+                <p className="font-medium">{task.account} — приоритет {task.priority}</p>
                 <p className="text-slate-400">Просрочка: {task.overdue} • Сумма: {formatCurrency(task.amount)}</p>
               </button>
             </li>
@@ -335,73 +304,72 @@ export const OperationsPage = () => {
         </ul>
       </section>
       <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-        <h3 className="text-lg font-semibold">Карточка должника</h3>
-        <div className="mt-4 space-y-2 text-sm">
-          <p><span className="text-slate-400">Клиент:</span> {current.name}</p>
-          <p><span className="text-slate-400">Сумма задолженности:</span> {formatCurrency(current.amount)}</p>
-          <p><span className="text-slate-400">Срок просрочки:</span> {current.overdue}</p>
-          <p><span className="text-slate-400">Рекомендованный канал:</span> звонок оператора</p>
-          <p><span className="text-slate-400">Последнее действие:</span> {lastAction}</p>
-        </div>
-        <div className="mt-5 grid grid-cols-1 gap-2">
-          <button disabled={isSubmitting} onClick={() => submitAction("Обещание платежа")} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">Обещание платежа</button>
-          <button disabled={isSubmitting} onClick={() => submitAction("Отказ")} className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-60">Отказ</button>
-          <button disabled={isSubmitting} onClick={() => submitAction("Перезвонить")} className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
-            <PhoneCall size={16} />
-            Перезвонить
-          </button>
-        </div>
+        <h3 className="text-lg font-semibold">Карточка счёта</h3>
+        {current ? (
+          <>
+            <div className="mt-4 space-y-2 text-sm">
+              <p><span className="text-slate-400">Счёт:</span> {current.account}</p>
+              <p><span className="text-slate-400">Задолженность:</span> {formatCurrency(current.amount)}</p>
+              <p><span className="text-slate-400">Просрочка:</span> {current.overdue}</p>
+              <p><span className="text-slate-400">Канал:</span> {current.channel}</p>
+              <p><span className="text-slate-400">Статус:</span> {current.status}</p>
+              <p><span className="text-slate-400">Последнее действие:</span> {lastAction}</p>
+            </div>
+            <div className="mt-5 grid grid-cols-1 gap-2">
+              <button disabled={isSubmitting} onClick={() => submitAction("Обещание платежа")} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">Обещание платежа</button>
+              <button disabled={isSubmitting} onClick={() => submitAction("Отказ")} className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-60">Отказ</button>
+              <button disabled={isSubmitting} onClick={() => submitAction("Перезвонить")} className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+                <PhoneCall size={16} />
+                Перезвонить
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-slate-400">Выберите счёт из списка.</p>
+        )}
       </section>
     </div>
   );
 };
 
-export const ChannelsPage = () => (
-  <div className="space-y-6">
-    <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <KpiCard title="Средний ROI по каналам" value="127%" />
-      <KpiCard title="Стоимость успешного взыскания" value={formatCurrency(1320)} />
-      <KpiCard title="Доля безрезультатных контактов" value="19%" />
-    </section>
-    <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-      <h3 className="text-lg font-semibold">Сравнение каналов взыскания</h3>
-      <div className="mt-4 h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={channelData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-            <XAxis dataKey="канал" stroke="#94a3b8" />
-            <YAxis yAxisId="left" stroke="#94a3b8" />
-            <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" />
-            <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} />
-            <Legend />
-            <Bar yAxisId="left" dataKey="roi" name="ROI, %" fill="#22c55e" radius={[8, 8, 0, 0]} />
-            <Bar yAxisId="right" dataKey="взыскание" name="Сумма взыскания, млн ₽" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </section>
-  </div>
-);
+export const ChannelsPage = () => {
+  const [metrics, setMetrics] = useState<ChannelMetric[]>([]);
 
-export const AbTestsPage = () => (
-  <div className="space-y-6">
-    <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
-      <KpiCard title="Recovery Rate (тест)" value="62%" />
-      <KpiCard title="Recovery Rate (контроль)" value="48%" />
-      <KpiCard title="Статистическая разница" value="+14 п.п." />
-      <KpiCard title="Финансовый uplift" value={formatCurrency(4350000)} />
-    </section>
-    <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-      <h3 className="text-lg font-semibold">Метрики A/B-теста</h3>
-      <ul className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
-        <li className="rounded-lg bg-slate-800/70 p-3">Сумма взыскания: тест {formatCurrency(17800000)}, контроль {formatCurrency(14300000)}</li>
-        <li className="rounded-lg bg-slate-800/70 p-3">Стоимость взыскания: тест {formatCurrency(1210000)}, контроль {formatCurrency(1520000)}</li>
-        <li className="rounded-lg bg-slate-800/70 p-3">ROI: тест 148%, контроль 117%</li>
-        <li className="rounded-lg bg-slate-800/70 p-3">Среднее время до оплаты: тест 12 дней, контроль 17 дней</li>
-      </ul>
-    </section>
-  </div>
-);
+  useEffect(() => {
+    channelService.getMetrics().then(setMetrics);
+  }, []);
+
+  if (!metrics.length) {
+    return <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 text-slate-400">Загрузка данных...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <KpiCard title="Средний ROI" value="127%" />
+        <KpiCard title="Средний отклик" value="16%" />
+        <KpiCard title="Успешных контактов" value="72%" />
+      </section>
+      <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <h3 className="text-lg font-semibold">Канал взыскания</h3>
+        <p className="mt-1 text-sm text-slate-400">Показатели эффективности по каналам для лицевых счетов.</p>
+        <div className="mt-4 h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={metrics}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis dataKey="channel" stroke="#94a3b8" />
+              <YAxis stroke="#94a3b8" />
+              <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} />
+              <Legend />
+              <Bar dataKey="roi" name="ROI, %" fill="#22c55e" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="responseRate" name="Отклик, %" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
+    </div>
+  );
+};
 
 const statusClassMap = {
   "Стабильна": "bg-emerald-950/40 text-emerald-300 border-emerald-800",
@@ -409,47 +377,84 @@ const statusClassMap = {
   "Критическая ошибка": "bg-rose-950/40 text-rose-300 border-rose-800"
 } as const;
 
-export const MlMonitoringPage = () => (
-  <div className="space-y-4">
-    <h3 className="text-lg font-semibold">Состояние ML-модели и качество</h3>
-    <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <KpiCard title="ROC-AUC" value="0.81" />
-      <KpiCard title="Precision / Recall" value="0.77 / 0.71" />
-      <KpiCard title="F1-score" value="0.74" />
-    </section>
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-      {(Object.keys(statusClassMap) as Array<keyof typeof statusClassMap>).map((status) => (
-        <article key={status} className={`rounded-xl border p-4 ${statusClassMap[status]}`}>
-          <p className="text-sm">Статус модели</p>
-          <p className="mt-1 text-lg font-semibold">{status}</p>
+export const MlMonitoringPage = () => {
+  const [quality, setQuality] = useState<ModelQuality | null>(null);
+
+  useEffect(() => {
+    modelService.getQuality().then(setQuality);
+  }, []);
+
+  if (!quality) {
+    return <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 text-slate-400">Загрузка данных...</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">Мониторинг модели</h3>
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <KpiCard title="ROC-AUC" value={quality.rocAuc.toFixed(2)} />
+        <KpiCard title="Precision" value={quality.precision.toFixed(2)} />
+        <KpiCard title="Recall" value={quality.recall.toFixed(2)} />
+      </section>
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <KpiCard title="ROC-AUC" value={quality.rocAuc.toFixed(2)} />
+        <KpiCard title="Precision" value={quality.precision.toFixed(2)} />
+        <KpiCard title="Recall" value={quality.recall.toFixed(2)} />
+      </section>
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <p className="text-sm text-slate-400">Модель</p>
+          <p className="mt-2 text-lg font-semibold">{quality.status}</p>
+          <p className="mt-1 text-sm text-slate-400">{quality.modelSource}</p>
         </article>
-      ))}
+        <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <p className="text-sm text-slate-400">Версия</p>
+          <p className="mt-2 text-lg font-semibold">{quality.version}</p>
+          <p className="mt-1 text-sm text-slate-400">Обучено: {quality.trainedOn}</p>
+        </article>
+        <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+          <p className="text-sm text-slate-400">F1 Score</p>
+          <p className="mt-2 text-lg font-semibold">{quality.f1Score.toFixed(2)}</p>
+        </article>
+      </section>
+      <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <h3 className="text-lg font-semibold">Confusion matrix</h3>
+        <p className="mt-1 text-sm text-slate-400">Представлено в формате горизонтальной диаграммы для лучшей читаемости.</p>
+        <div className="mt-4 h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={quality.confusion} layout="vertical" margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis type="number" stroke="#94a3b8" />
+              <YAxis dataKey="name" type="category" stroke="#94a3b8" width={120} />
+              <Tooltip contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} />
+              <Bar dataKey="value" fill="#60a5fa" radius={[8, 0, 0, 8]}>
+                <Cell />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <ul className="mt-4 space-y-2 text-sm text-slate-300">
+          {quality.confusion.map((item) => (
+            <li key={item.name}>• {item.name}: {item.value}</li>
+          ))}
+        </ul>
+      </section>
+      <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <h3 className="text-lg font-semibold">Алерты drift</h3>
+        <div className="mt-4 space-y-3 text-sm">
+          {quality.driftAlerts.map((alert) => (
+            <div key={alert.name} className="flex items-center justify-between rounded-xl bg-slate-950/70 px-4 py-3">
+              <span>{alert.name}</span>
+              <span className={`rounded-full px-2 py-1 text-xs ${alert.level === "high" ? "bg-rose-600 text-white" : alert.level === "medium" ? "bg-amber-500 text-slate-950" : "bg-emerald-600 text-white"}`}>
+                {alert.level === "high" ? "High" : alert.level === "medium" ? "Medium" : "OK"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
-    <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-      <h3 className="text-lg font-semibold">Confusion Matrix (сравнение модели и оператора)</h3>
-      <div className="mt-4 h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart>
-            <CartesianGrid stroke="#334155" />
-            <XAxis dataKey="x" name="Категория" tick={false} stroke="#94a3b8" />
-            <YAxis dataKey="y" name="Количество кейсов" stroke="#94a3b8" />
-            <Tooltip
-              cursor={{ strokeDasharray: "3 3" }}
-              formatter={(value: number, _name, item) => [value, item?.payload?.name ?? "Категория"]}
-              contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 12 }}
-            />
-            <Scatter name="Кейсы" data={confusionData} fill="#60a5fa" />
-          </ScatterChart>
-        </ResponsiveContainer>
-      </div>
-      <ul className="mt-4 space-y-2 text-sm text-slate-300">
-        {confusionData.map((item) => (
-          <li key={item.x}>• {item.name}</li>
-        ))}
-      </ul>
-    </section>
-  </div>
-);
+  );
+};
 
 export const ReportsPage = () => {
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -459,7 +464,6 @@ export const ReportsPage = () => {
     "Отчёт по эффективности каналов",
     "Отчёт по работе операторов",
     "Отчёт по рекомендациям модели",
-    "Отчёт по A/B-тестам",
     "Отчёт по качеству ML-модели",
     "Executive-отчёт для руководства"
   ];
@@ -487,7 +491,7 @@ export const ReportsPage = () => {
           {reportTitles.map((title) => (
             <div key={title} className="rounded-lg bg-slate-800/70 p-3">
               <p className="text-sm">{title}</p>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {(["XLSX", "CSV", "PDF"] as ReportFormat[]).map((format) => {
                   const key = `${title}-${format}`;
                   return (
@@ -510,64 +514,3 @@ export const ReportsPage = () => {
     </div>
   );
 };
-
-export const SettingsPage = () => {
-  const [form, setForm] = useState<SystemSettings>({ rocAlertThreshold: 0.75, dataRefreshHours: 24, autoRetryEnabled: true });
-  const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState<string>("");
-
-  const saveSettings = async () => {
-    setSaving(true);
-    const next = await settingsService.save(form);
-    setForm(next);
-    setSavedAt(new Date().toLocaleTimeString("ru-RU"));
-    setSaving(false);
-  };
-
-  return (
-    <div className="space-y-4">
-      <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-        <h3 className="text-lg font-semibold">Настройки системы</h3>
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className="text-sm">
-            <span className="mb-2 block text-slate-400">Порог ROC-AUC для алерта</span>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              max="1"
-              value={form.rocAlertThreshold}
-              onChange={(event) => setForm((prev) => ({ ...prev, rocAlertThreshold: Number(event.target.value) }))}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="mb-2 block text-slate-400">Интервал обновления данных (часы)</span>
-            <input
-              type="number"
-              min="1"
-              value={form.dataRefreshHours}
-              onChange={(event) => setForm((prev) => ({ ...prev, dataRefreshHours: Number(event.target.value) }))}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
-            />
-          </label>
-          <label className="inline-flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={form.autoRetryEnabled}
-              onChange={(event) => setForm((prev) => ({ ...prev, autoRetryEnabled: event.target.checked }))}
-            />
-            Автоматическая повторная загрузка при ошибках
-          </label>
-        </div>
-        <div className="mt-4 flex items-center gap-3">
-          <button type="button" onClick={saveSettings} disabled={saving} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-60">
-            {saving ? "Сохранение..." : "Сохранить настройки"}
-          </button>
-          {savedAt ? <span className="text-xs text-slate-400">Сохранено: {savedAt}</span> : null}
-        </div>
-      </section>
-    </div>
-  );
-};
-

@@ -8,3 +8,4 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+#file:## GitHub Copilot Chat.md

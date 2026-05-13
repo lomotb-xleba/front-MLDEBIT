@@ -1,3 +1,18 @@
+import {
+  dashboardMetrics,
+  DashboardMetrics,
+  receivablesSummary,
+  ReceivablesSummary,
+  recommendationsMock,
+  RecommendationItem,
+  operationTasks,
+  OperationTask,
+  channelMetrics,
+  ChannelMetric,
+  modelQuality,
+  ModelQuality
+} from "./mockData";
+
 export type ReportFormat = "XLSX" | "CSV" | "PDF";
 
 export type RecommendationStatus = "в работе" | "выполнено";
@@ -11,15 +26,25 @@ export type SystemSettings = {
 
 const wait = (ms = 350) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const reportService = {
-  async exportReport(reportName: string, format: ReportFormat): Promise<Blob> {
+export const dashboardService = {
+  async getMetrics(): Promise<DashboardMetrics> {
     await wait();
-    const payload = `Отчёт: ${reportName}\nФормат: ${format}\nДата: ${new Date().toISOString()}\n`;
-    return new Blob([payload], { type: "text/plain;charset=utf-8" });
+    return dashboardMetrics;
+  }
+};
+
+export const receivablesService = {
+  async getSummary(): Promise<ReceivablesSummary> {
+    await wait();
+    return receivablesSummary;
   }
 };
 
 export const recommendationService = {
+  async list(): Promise<RecommendationItem[]> {
+    await wait();
+    return recommendationsMock;
+  },
   async setStatus(recommendationId: string, status: RecommendationStatus): Promise<{ id: string; status: RecommendationStatus }> {
     await wait();
     return { id: recommendationId, status };
@@ -27,9 +52,35 @@ export const recommendationService = {
 };
 
 export const operationService = {
+  async listTasks(): Promise<OperationTask[]> {
+    await wait();
+    return operationTasks;
+  },
   async submitAction(action: { debtorId: string; result: OperatorResult; comment?: string }): Promise<{ ok: true; actionId: string }> {
     await wait();
     return { ok: true, actionId: `${action.debtorId}-${Date.now()}` };
+  }
+};
+
+export const channelService = {
+  async getMetrics(): Promise<ChannelMetric[]> {
+    await wait();
+    return channelMetrics;
+  }
+};
+
+export const modelService = {
+  async getQuality(): Promise<ModelQuality> {
+    await wait();
+    return modelQuality;
+  }
+};
+
+export const reportService = {
+  async exportReport(reportName: string, format: ReportFormat): Promise<Blob> {
+    await wait();
+    const payload = `Отчёт: ${reportName}\nФормат: ${format}\nДата: ${new Date().toISOString()}\n`;
+    return new Blob([payload], { type: "text/plain;charset=utf-8" });
   }
 };
 

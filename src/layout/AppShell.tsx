@@ -14,7 +14,7 @@ type AppShellProps = {
 
 export const AppShell = ({ activePage, onChangePage, onChangeRole, menuItems, roleTitle, roleAccessHint, children }: AppShellProps) => (
   <div className="min-h-screen bg-slate-950 text-slate-100">
-    <div className="mx-auto flex max-w-[1400px] gap-6 px-6 py-6">
+    <div className="mx-auto flex max-w-[1600px] w-full gap-6 px-6 py-6">
       <Sidebar activePage={activePage} onSelectPage={onChangePage} menuItems={menuItems} />
 
       <main className="flex-1 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-sm">

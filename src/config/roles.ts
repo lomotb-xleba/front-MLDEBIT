@@ -54,12 +54,10 @@ export const pageToDomain: Record<PageId, keyof Omit<RoleRule, "label">> = {
   dashboard: "dashboards",
   receivables: "dashboards",
   channels: "dashboards",
-  "ab-tests": "dashboards",
   reports: "dashboards",
   recommendations: "debtWork",
   operations: "debtWork",
-  "ml-monitoring": "mlMonitoring",
-  settings: "userManagement"
+  "ml-monitoring": "mlMonitoring"
 };
 
 export const accessLevelLabel: Record<Exclude<AccessLevel, "none">, string> = {

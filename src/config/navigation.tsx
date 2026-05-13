@@ -6,7 +6,6 @@ import {
   ClipboardList,
   FileBarChart2,
   LayoutDashboard,
-  Settings,
   WalletCards
 } from "lucide-react";
 
@@ -16,10 +15,8 @@ export type PageId =
   | "recommendations"
   | "operations"
   | "channels"
-  | "ab-tests"
   | "ml-monitoring"
-  | "reports"
-  | "settings";
+  | "reports";
 
 export type MenuItem = {
   id: PageId;
@@ -33,10 +30,8 @@ export const menuItems: MenuItem[] = [
   { id: "recommendations", title: "Рекомендации", icon: Bell },
   { id: "operations", title: "Операционная работа", icon: WalletCards },
   { id: "channels", title: "Эффективность каналов", icon: ClipboardList },
-  { id: "ab-tests", title: "A/B-тесты", icon: FileBarChart2 },
   { id: "ml-monitoring", title: "Мониторинг моделей", icon: Bot },
-  { id: "reports", title: "Отчёты", icon: FileBarChart2 },
-  { id: "settings", title: "Настройки", icon: Settings }
+  { id: "reports", title: "Отчёты", icon: FileBarChart2 }
 ];
 
 export const pageTitleMap: Record<PageId, string> = {
@@ -45,8 +40,6 @@ export const pageTitleMap: Record<PageId, string> = {
   recommendations: "Рекомендации",
   operations: "Операционная работа",
   channels: "Эффективность каналов",
-  "ab-tests": "A/B-тесты",
   "ml-monitoring": "Мониторинг моделей",
-  reports: "Отчёты",
-  settings: "Настройки"
+  reports: "Отчёты"
 };
