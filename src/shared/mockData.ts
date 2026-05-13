@@ -121,9 +121,9 @@ export const receivablesSummary: ReceivablesSummary = {
   overdueShare: 75,
   avgOverdueDays: 43,
   topRegions: [
-    { region: "Москва", amount: 35400000 },
-    { region: "Санкт-Петербург", amount: 21800000 },
-    { region: "Поволжье", amount: 13200000 }
+    { region: "Октябрьский район", amount: 35400000 },
+    { region: "Свердловский район", amount: 21800000 },
+    { region: "Иркутск 2", amount: 13200000 }
   ],
   overdueDistribution: [
     { name: "0–30 дн.", value: 28 },
@@ -146,7 +146,7 @@ export const recommendationsMock: RecommendationItem[] = [
     successRate: "78%",
     debt: 840000,
     riskScore: 0.62,
-    region: "Москва",
+    region: "Октябрьский район",
     status: "в работе"
   },
   {
@@ -157,7 +157,7 @@ export const recommendationsMock: RecommendationItem[] = [
     successRate: "61%",
     debt: 460000,
     riskScore: 0.48,
-    region: "Казань",
+    region: "Октябрьский район",
     status: "в работе"
   },
   {
@@ -168,7 +168,7 @@ export const recommendationsMock: RecommendationItem[] = [
     successRate: "53%",
     debt: 320000,
     riskScore: 0.71,
-    region: "Санкт-Петербург",
+    region: "Иркутск 2",
     status: "в работе"
   }
 ];
